@@ -1,0 +1,15 @@
+{
+    "routes": [
+        {
+            "src": "/",
+            "status": 308,
+            "headers": {
+                "Location": "/api"
+            }
+        },
+        {
+            "src": "/api",
+            "dest": "/api/get"
+        }
+    ]
+}
