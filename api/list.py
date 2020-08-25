@@ -27,10 +27,16 @@ class handler(BaseHTTPRequestHandler):
         try:
             if "v" not in query:
                 raise Exception("'v' parameter is required")
+
             video_id = query["v"][0]
             if len(video_id) != 11:
                 raise Exception("Invalid video ID")
-            data = transcript_list(video_id)
+
+            def dictAddUrl(n):
+                host = "https://yt-transcript.vercel.app"
+                n["url"] = f"{host}/api/get?v={video_id}&lang={n['lang_code']}&type={n['type']}"
+                return n
+            data = list(map(dictAddUrl, transcript_list(video_id)))
 
         except TranscriptsDisabled:
             message = "No subtitle found in this video"
