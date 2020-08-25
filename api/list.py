@@ -4,6 +4,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled
 import json
 
+host = "https://yt-transcript.vercel.app"
+
 def transcript_list(video_id):
     neat_transcript_list = []
     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
@@ -33,7 +35,6 @@ class handler(BaseHTTPRequestHandler):
                 raise Exception("Invalid video ID")
 
             def dictAddUrl(n):
-                host = "https://yt-transcript.vercel.app"
                 n["url"] = f"{host}/api/get?v={video_id}&lang={n['lang_code']}&type={n['type']}"
                 return n
             data = list(map(dictAddUrl, transcript_list(video_id)))
