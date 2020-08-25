@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import TranscriptsDisabled
 import json
 
 def transcript_list(video_id):
@@ -23,17 +24,19 @@ class handler(BaseHTTPRequestHandler):
         data = []
         query = parse_qs(urlparse(self.path).query)
         
-        if "v" not in query:
-            message = "'v' parameter is required"
-        else:
+        try:
+            if "v" not in query:
+                raise Exception("'v' parameter is required")
             video_id = query["v"][0]
             if len(video_id) != 11:
-                message = "Invalid video ID"
-            else:
-                try:
-                    data = transcript_list(video_id)
-                except:
-                    message = "No subtitle found in this video"
+                raise Exception("Invalid video ID")
+            data = transcript_list(video_id)
+
+        except TranscriptsDisabled:
+            message = "No subtitle found in this video"
+            
+        except Exception as err:
+            message = str(err)
 
         res = json.dumps({
             "isError": True if message != "" else False,
