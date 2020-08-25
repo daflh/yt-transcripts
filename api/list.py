@@ -40,7 +40,7 @@ class handler(BaseHTTPRequestHandler):
             data = list(map(dictAddUrl, transcript_list(video_id)))
 
         except TranscriptsDisabled:
-            message = "No subtitle found in this video"
+            message = "No transcript found in this video"
             
         except Exception as err:
             message = str(err)

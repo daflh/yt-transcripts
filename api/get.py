@@ -39,8 +39,8 @@ class handler(BaseHTTPRequestHandler):
                 optArgs["translate"] = translateTo
             data = get_transcript(video_id, **optArgs)
 
-        except TranscriptError.NoTranscriptFound:
-            message = "No transcript(s) were found"
+        except (TranscriptError.NoTranscriptFound, TranscriptError.TranscriptsDisabled):
+            message = "No transcript found"
 
         except TranscriptError.TranslationLanguageNotAvailable:
             message = f"Translation to language '{translateTo}' is not available"
