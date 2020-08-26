@@ -4,7 +4,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled
 import json
 
-host = "https://yt-transcript.vercel.app"
+host = "https://yt-transcripts.vercel.app"
 
 def transcript_list(video_id):
     neat_transcript_list = []

@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, _errors as TranscriptError
 import json
 
-host = "https://yt-transcript.vercel.app"
+host = "https://yt-transcripts.vercel.app"
 
 def get_transcript(video_id, lang_code, transcript_type, translate_to = None):
     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
