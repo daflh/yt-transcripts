@@ -73,9 +73,8 @@ class handler(BaseHTTPRequestHandler):
         if is_error:
             info["message"] = message
 
-        temp_lang = info["lang_code"]
-        if len(temp_lang) == 1:
-            info["lang_code"] = temp_lang[0]
+        if "lang_code" in info and len(info["lang_code"]) == 1:
+            info["lang_code"] = info["lang_code"][0]
 
         response = json.dumps({
             "is_error": is_error,
