@@ -13,7 +13,7 @@ def transcript_list(video_id):
         neat_transcript_list.append({
             "lang": transcript.language,
             "lang_code": transcript.language_code,
-            "type": 2 if transcript.is_generated else 1,
+            "transcript_type": "generated" if transcript.is_generated else "manual",
             "translatable": transcript.is_translatable
         })
 
@@ -23,6 +23,7 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         message = ""
+        info = {}
         data = []
         query = parse_qs(urlparse(self.path).query)
         
@@ -33,9 +34,12 @@ class handler(BaseHTTPRequestHandler):
             video_id = query["v"][0]
             if len(video_id) != 11:
                 raise Exception("Invalid video ID")
+            else:
+                info["video_id"] = video_id
+                info["video_url"] = f"https://www.youtube.com/watch?v={video_id}"
 
             def dictAddUrl(n):
-                n["url"] = f"{host}/api/get?v={video_id}&lang={n['lang_code']}&type={n['type']}"
+                n["url"] = f"{host}/get?v={video_id}&lang={n['lang_code']}&type={n['transcript_type']}"
                 return n
             data = list(map(dictAddUrl, transcript_list(video_id)))
 
@@ -45,14 +49,18 @@ class handler(BaseHTTPRequestHandler):
         except Exception as err:
             message = str(err)
 
-        res = json.dumps({
-            "isError": True if message != "" else False,
-            "message": message,
+        is_error = False if message == "" else True
+        if is_error:
+            info["message"] = message
+
+        response = json.dumps({
+            "is_error": is_error,
+            **info,
             "data": data
         }).encode()
 
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+        self.send_response(400 if is_error else 200)
+        self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
-        self.wfile.write(res)
+        self.wfile.write(response)
         return
