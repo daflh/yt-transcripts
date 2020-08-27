@@ -1,7 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import TranscriptsDisabled
 import json
 
 host = "https://yt-transcripts.vercel.app"
@@ -28,26 +27,24 @@ class handler(BaseHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         
         try:
-            if "v" not in query:
-                raise Exception("'v' parameter is required")
+            assert "v" in query, "Missing required parameter 'v'"
 
             video_id = query["v"][0]
-            if len(video_id) != 11:
-                raise Exception("Invalid video ID")
-            else:
-                info["video_id"] = video_id
-                info["video_url"] = f"https://www.youtube.com/watch?v={video_id}"
+            assert len(video_id) == 11, "Invalid video ID"
+            info["video_id"] = video_id
+            info["video_url"] = f"https://www.youtube.com/watch?v={video_id}"
 
             def dictAddUrl(n):
                 n["url"] = f"{host}/get?v={video_id}&lang={n['lang_code']}&type={n['transcript_type']}"
                 return n
             data = list(map(dictAddUrl, transcript_list(video_id)))
-
-        except TranscriptsDisabled:
-            message = "No transcript found in this video"
             
         except Exception as err:
-            message = str(err)
+            if "CAUSE_MESSAGE" in dir(err):
+                _msg = str(getattr(err, "CAUSE_MESSAGE"))
+                message = _msg if ":" not in _msg else _msg.split(":")[0]
+            else:
+                message = str(err)
 
         is_error = False if message == "" else True
         if is_error:

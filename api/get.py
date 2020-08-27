@@ -1,6 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-from youtube_transcript_api import YouTubeTranscriptApi, _errors as TranscriptError
+from youtube_transcript_api import YouTubeTranscriptApi
 import json
 
 host = "https://yt-transcripts.vercel.app"
@@ -30,12 +30,10 @@ class handler(BaseHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         
         try:
-            if "v" not in query:
-                raise Exception("'v' parameter is required")
+            assert "v" in query, "Missing required parameter 'v'"
 
             video_id = query["v"][0]
-            if len(video_id) != 11:
-                raise Exception("Invalid video ID")
+            assert len(video_id) == 11, "Invalid video ID"
             info["video_id"] = video_id
             info["transcript_list_url"] = f"{host}/list?v={video_id}"
 
@@ -47,34 +45,27 @@ class handler(BaseHTTPRequestHandler):
                 args["lang_code"] = ["en"]
 
             if "type" in query:
-                if query["type"][0] not in ("manual", "generated", "both"):
-                    raise Exception("Invalid transcript type, use manual, generated, or both")
+                assert query["type"][0] in ("manual", "generated", "both"), "Invalid transcript type, use 'manual', 'generated', or 'both'"
                 args["transcript_type"] = query["type"][0]
             else:
                 args["transcript_type"] = "both"
 
             if "translate" in query:
-                translate_to = query["translate"][0]
-                args["translate_to"] = translate_to
+                args["translate_to"] = query["translate"][0]
 
             info.update(args)
             data = get_transcript(video_id, **args)
-
-        except (TranscriptError.NoTranscriptFound, TranscriptError.TranscriptsDisabled):
-            message = f"No transcript found"
-
-        except TranscriptError.TranslationLanguageNotAvailable:
-            message = f"Translation to language '{translate_to}' is not available"
             
         except Exception as err:
-            message = str(err)
+            if "CAUSE_MESSAGE" in dir(err):
+                _msg = str(getattr(err, "CAUSE_MESSAGE"))
+                message = _msg if ":" not in _msg else _msg.split(":")[0]
+            else:
+                message = str(err)
 
         is_error = False if message == "" else True
         if is_error:
             info["message"] = message
-
-        if "lang_code" in info and len(info["lang_code"]) == 1:
-            info["lang_code"] = info["lang_code"][0]
 
         response = json.dumps({
             "is_error": is_error,
