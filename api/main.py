@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
 import json
 
-# don't know how to dynamically get scheme & netloc
+# don't know how to get scheme & netloc dynamically
 host = "https://yt-transcripts.vercel.app"
 
 def _list(video_id):
@@ -22,9 +22,7 @@ def _list(video_id):
             "url": f"{host}/api?v={video_id}&lang={lang_code}&type={transcript_type}"
         })
 
-    return {
-        "data": neat_transcript_list
-    }
+    return neat_transcript_list
 
 def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
@@ -55,29 +53,27 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
         original_lang = transcript.language_code
         transcript = transcript.translate(translate_to)
         
-    return {
+    return [transcript.fetch(), {
         "lang_code": transcript.language_code,
         "translated_from": original_lang,
-        "transcript_type": "generated" if transcript.is_generated else "manual",
-        "data": transcript.fetch()
-    }
+        "transcript_type": "generated" if transcript.is_generated else "manual"
+    }]
 
-def get(q):
+def get(qs):
     message = ""
     responses = {}
     
     try:
-        assert "v" in q, "Missing required parameter 'v'"
-        assert len(q["v"]) == 11, "Invalid video ID"
+        assert "v" in qs, "Missing required parameter 'v'"
+        assert len(qs["v"]) == 11, "Invalid video ID"
 
-        video_id = q["v"]
+        video_id = qs["v"]
 
-        if "list" in q and q["list"] in ["true", "1"]:
+        if "list" in qs and qs["list"] == "true":
             responses["video_id"] = video_id
             responses["video_url"] = "https://www.youtube.com/watch?v=" + video_id
 
-            # combine "responses" dict and response data
-            responses.update(_list(video_id))
+            responses["data"] = _list(video_id)
 
         else:
             # arguments to pass to "fetch" func
@@ -86,19 +82,19 @@ def get(q):
 
             responses["transcript_list_url"] = f"{host}/api?v={video_id}&list=true"
 
-            if "lang" in q:
-                args["lang_code"] = q["lang"].split(",")
-            if "tl" in q:
-                args["translate_to"] = q["tl"]
+            if "lang" in qs:
+                args["lang_code"] = qs["lang"].split(",")
+            if "tl" in qs:
+                args["translate_to"] = qs["tl"]
             # ignore if "type" isn't "generated" or "manual"
-            if "type" in q and q["type"] in ["generated", "manual"]:
-                args["transcript_type"] = q["type"]
+            if "type" in qs and qs["type"] in ["generated", "manual"]:
+                args["transcript_type"] = qs["type"]
 
-            transcript = _find(**args)
-            responses.update({
-                "request_params": args,
-                **transcript
-            })
+            responses["request_params"] = args
+            data, data_attribute = _find(**args)
+
+            responses.update(data_attribute)
+            responses["data"] = data
         
     except Exception as e:
         _msg = str(e)
@@ -111,24 +107,23 @@ def get(q):
         message = _msg
         responses["data"] = []
 
-    status_code = 200 if message == "" else 400
-    responses = json.dumps({
+    return {
         "is_error": False if message == "" else True,
         "message": message,
         **responses
-    }).encode()
-
-    return [status_code, responses]
+    }
 
 class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         # this will take the last parameter if it's more than 1
-        query = dict(parse_qsl(urlparse(self.path).query))
-        status_code, responses = get(query)
+        qs = dict(parse_qsl(urlparse(self.path).query))
+
+        responses = get(qs)
+        status_code = 200 if not responses["is_error"] else 400
 
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
-        self.wfile.write(responses)
+        self.wfile.write(json.dumps(responses).encode())
         return
