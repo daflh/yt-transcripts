@@ -4,16 +4,12 @@
             "src": "/",
             "status": 308,
             "headers": {
-                "Location": "/get"
+                "Location": "/api"
             }
         },
         {
-            "src": "/get",
-            "dest": "/api/get"
-        },
-        {
-            "src": "/list",
-            "dest": "/api/list"
+            "src": "/api",
+            "dest": "/api/main"
         }
     ]
 }
