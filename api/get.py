@@ -1,80 +1,100 @@
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
 import json
 
+# don't know how to dynamically get scheme & netloc
 host = "https://yt-transcripts.vercel.app"
 
-def get_transcript(video_id, lang_code, transcript_type, translate_to = None):
+def fetch(video_id, lang_code = [], translate_to = None, transcript_type = ""):
     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
     if transcript_type == "manual":
         methodToFind = "find_manually_created_transcript"
     elif transcript_type == "generated":
         methodToFind = "find_generated_transcript"
-    elif transcript_type == "both":
+    else:
+        # this method will find regardless of the type
+        # but manually created takes precedence
         methodToFind = "find_transcript"
+    
+    # if "lang_code" list is empty, search for english transcript, then search
+    # from the list of available languages of the video
+    if len(lang_code) == 0:
+        available_lang = list(map(
+            lambda n: n.language_code,
+            list(transcript_list)
+        ))
+        lang_code = ["en", *available_lang]
+
     transcript = getattr(transcript_list, methodToFind)(lang_code)
+    # it will contains original language of the translation
+    original_lang = None
 
     if translate_to != None:
+        original_lang = transcript.language_code
         transcript = transcript.translate(translate_to)
         
-    return transcript.fetch()
+    return {
+        "lang_code": transcript.language_code,
+        "translated_from": original_lang,
+        "transcript_type": "generated" if transcript.is_generated else "manual",
+        "data": transcript.fetch()
+    }
 
 class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
+        # this will take the last parameter if it's more than 1
+        q = dict(parse_qsl(urlparse(self.path).query))
+
         message = ""
-        info = {}
-        data = []
-        query = parse_qs(urlparse(self.path).query)
+        responses = {}
         
         try:
-            assert "v" in query, "Missing required parameter 'v'"
+            assert "v" in q, "Missing required parameter 'v'"
 
-            video_id = query["v"][0]
-            assert len(video_id) == 11, "Invalid video ID"
-            info["video_id"] = video_id
-            info["transcript_list_url"] = f"{host}/list?v={video_id}"
-
+            # arguments to pass to "fetch" func
             args = {}
+            args["video_id"] = q["v"]
 
-            if "lang" in query:
-                args["lang_code"] = query["lang"][0].split(",")
-            else:
-                args["lang_code"] = ["en"]
+            assert len(q["v"]) == 11, "Invalid video ID"
 
-            if "type" in query:
-                assert query["type"][0] in ("manual", "generated", "both"), "Invalid transcript type, use 'manual', 'generated', or 'both'"
-                args["transcript_type"] = query["type"][0]
-            else:
-                args["transcript_type"] = "both"
+            responses["transcript_list_url"] = host + "/list?v=" + q["v"]
 
-            if "translate" in query:
-                args["translate_to"] = query["translate"][0]
+            if "lang" in q:
+                args["lang_code"] = q["lang"].split(",")
+            if "tl" in q:
+                args["translate_to"] = q["tl"]
+            if "type" in q and q["type"] in ["generated", "manual"]:
+                args["transcript_type"] = q["type"]
 
-            info.update(args)
-            data = get_transcript(video_id, **args)
+            responses.update({
+                "request_params": args
+            })
+            transcript = fetch(**args)
+            responses.update(transcript)
             
-        except Exception as err:
-            if "CAUSE_MESSAGE" in dir(err):
-                _msg = str(getattr(err, "CAUSE_MESSAGE"))
-                message = _msg if ":" not in _msg else _msg.split(":")[0]
-            else:
-                message = str(err)
+        except Exception as e:
+            _msg = str(e)
+            # get CAUSE_MESSAGE of YouTubeTranscriptApi errors
+            if "CAUSE_MESSAGE" in dir(e):
+                cause = str(getattr(e, "CAUSE_MESSAGE"))
+                # only for NoTranscriptFound error
+                _msg = cause.split(":")[0] if ":" in cause else cause
 
-        is_error = False if message == "" else True
-        if is_error:
-            info["message"] = message
+            message = _msg
+            responses["data"] = []
 
-        response = json.dumps({
-            "is_error": is_error,
-            **info,
-            "data": data
+        status_code = 200 if message == "" else 400
+        responses = json.dumps({
+            "is_error": False if message == "" else True,
+            "message": message,
+            **responses
         }).encode()
 
-        self.send_response(400 if is_error else 200)
+        self.send_response(status_code)
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
-        self.wfile.write(response)
+        self.wfile.write(responses)
         return
