@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
-import json
+import json, re
 
 # don't know how to get scheme & netloc dynamically
 host = "https://yt-transcripts.vercel.app"
@@ -51,6 +51,7 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
 
     if translate_to != None:
         original_lang = transcript.language_code
+        # translate to requested language
         transcript = transcript.translate(translate_to)
         
     return [transcript.fetch(), {
@@ -59,17 +60,53 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
         "transcript_type": "generated" if transcript.is_generated else "manual"
     }]
 
+def search(data, qs):
+    key = qs["key"]
+    cs = True if qs.get("cs") == "true" else False
+    # use empty string as marker (or no marker, actually) if "marker" param not present
+    marker = qs.get("marker", "")
+    if "_%_" in marker:
+        marker_s, marker_e = marker.split("_%_")
+    else:
+        marker_s = marker_e = marker
+
+    filtered_data = []
+
+    for item in data:
+        text = item["text"]
+        # this contains an iterator of all "key" substring that appear in "text"
+        occurrences = re.finditer(key, text, flags = re.IGNORECASE if not cs else 0)
+        # get all start position, then reverse, so that marking starts from behind,
+        # and do not mess up the position of "key"(s) in "text"
+        starts = list(reversed([m.start() for m in occurrences]))
+        if len(starts) > 0:
+            for s in starts:
+                # "s" stand for start position and "e" stand for end position
+                e = s + len(key)
+                text = text[:s] + marker_s + text[s:e] + marker_e + text[e:]
+            item["text"] = text
+            filtered_data.append(item)
+
+    return [filtered_data, {
+        "keyword": key,
+        "case_sensitive": cs,
+        "marker_start": marker_s,
+        "marker_end": marker_e,
+        "found": len(filtered_data)
+    }]
+
 def get(qs):
     message = ""
     responses = {}
     
     try:
         assert "v" in qs, "Missing required parameter 'v'"
+        # youtube video ID is always 11 characters in length
         assert len(qs["v"]) == 11, "Invalid video ID"
 
         video_id = qs["v"]
 
-        if "list" in qs and qs["list"] == "true":
+        if qs.get("list") == "true":
             responses["video_id"] = video_id
             responses["video_url"] = "https://www.youtube.com/watch?v=" + video_id
 
@@ -91,9 +128,17 @@ def get(qs):
                 args["transcript_type"] = qs["type"]
 
             responses["request_params"] = args
-            data, data_attribute = _find(**args)
+            data, attributes = _find(**args)
 
-            responses.update(data_attribute)
+            responses.update(attributes)
+
+            # if there's "key" in params, return text that contains the value of "key"
+            # "cs" and "marker" only used when this param given 
+            if "key" in qs:
+                data, search_attributes = search(data, qs)
+                # this is just search options (keyword, etc.) and how many text found
+                responses["search"] = search_attributes
+
             responses["data"] = data
         
     except Exception as e:
@@ -109,6 +154,7 @@ def get(qs):
 
     return {
         "is_error": False if message == "" else True,
+        # if there's no error, "message" contains only empty string
         "message": message,
         **responses
     }
@@ -125,5 +171,6 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
+        # convert python dict to json
         self.wfile.write(json.dumps(responses).encode())
         return
