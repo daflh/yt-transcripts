@@ -1,15 +1,8 @@
 {
-    "routes": [
+    "redirects": [
         {
-            "src": "/",
-            "status": 308,
-            "headers": {
-                "Location": "/api"
-            }
-        },
-        {
-            "src": "/api",
-            "dest": "/api/main"
+            "source": "/",
+            "destination": "/api"
         }
     ]
 }
