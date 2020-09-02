@@ -102,7 +102,7 @@ def get(qs):
     try:
         assert "v" in qs, "Missing required parameter 'v'"
         # youtube video ID is always 11 characters in length
-        assert len(qs["v"]) == 11, "Invalid video ID"
+        assert len(qs["v"]) == 11, "Invalid video ID, try 'jNQXAC9IVRw' as an example"
 
         video_id = qs["v"]
 
@@ -130,7 +130,10 @@ def get(qs):
             responses["request_params"] = args
             data, attributes = _find(**args)
 
-            responses.update(attributes)
+            responses.update({
+                **attributes,
+                "found": len(data)
+            })
 
             # if there's "key" in params, return text that contains the value of "key"
             # "cs" and "marker" only used when this param given 
