@@ -126,10 +126,7 @@ def get(qs):
             responses["request_params"] = args
             data, attributes = _find(**args)
 
-            responses.update({
-                **attributes,
-                "found": len(data)
-            })
+            responses.update(attributes)
 
             # if there's "key" in params, return text that contains the value of "key"
             # "cs" and "marker" only used when this param given 
@@ -146,7 +143,7 @@ def get(qs):
             assert size.isdigit(), "Invalid page number, only positive integers are valid"
             size = int(size)
 
-            if size > 0:
+            if len(data) > 0 and size > 0:
                 # these only run when 'size' param is present, showing page 1 by default
                 page = qs.get("page", "1")
                 # if 'page' param is not digit, return -1, so there will be an assertion error
