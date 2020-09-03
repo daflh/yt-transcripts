@@ -60,13 +60,9 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
         "transcript_type": "generated" if transcript.is_generated else "manual"
     }]
 
-def search(data, qs):
-    key = qs["key"]
-    cs = True if qs.get("cs") == "true" else False
-    # use empty string as marker (or no marker, actually) if "marker" param not present
-    marker = qs.get("marker", "")
+def search(data, key, cs = False, marker = ""):
     if "_%_" in marker:
-        marker_s, marker_e = marker.split("_%_")
+        marker_s, marker_e = marker.split("_%_")[0:2]
     else:
         marker_s = marker_e = marker
 
@@ -138,29 +134,36 @@ def get(qs):
             # if there's "key" in params, return text that contains the value of "key"
             # "cs" and "marker" only used when this param given 
             if "key" in qs:
-                data, search_attributes = search(data, qs)
+                case_sens = True if qs.get("cs") == "true" else False
+                # use no marker by default
+                marker = qs.get("marker", "")
+                data, search_attributes = search(data, qs["key"], case_sens, marker)
                 # this is just search options (keyword, etc.) and how many text found
                 responses["search"] = search_attributes
 
             # by default, size is 0, which means show all
-            size = int(qs.get("size", 0))
-            assert size >= 0, "Invalid size, only positive integers are valid"
+            size = qs.get("size", "0")
+            assert size.isdigit(), "Invalid page number, only positive integers are valid"
+            size = int(size)
 
             if size > 0:
                 # these only run when 'size' param is present, showing page 1 by default
-                page = int(qs.get("page", 1))
-                assert page > 0, "Invalid page number, only positive integers are valid"
+                page = qs.get("page", "1")
+                # if 'page' param is not digit, return -1, so there will be an assertion error
+                page = int(page) if page.isdigit() else -1
+                t_pages = math.ceil(len(data) / size)
+
+                assert 1 <= page <= t_pages, f"Invalid page, there are only page 1 until {t_pages}"
 
                 # reduce the value of 'page' by 1 because list index starts with 0
                 start = size * (page - 1)
                 end = start + size
-                number_of_pages = math.ceil(len(data) / size)
                 data = data[start:end]
 
                 responses.update({
                     "size": size,
                     "page": page,
-                    "number_of_pages": number_of_pages
+                    "total_pages": t_pages
                 })
 
             responses["data"] = data
@@ -187,9 +190,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         # this will take the last parameter if it's more than 1
-        qs = dict(parse_qsl(urlparse(self.path).query))
+        query_string = dict(parse_qsl(urlparse(self.path).query))
 
-        responses = get(qs)
+        responses = get(query_string)
         status_code = 200 if not responses["is_error"] else 400
 
         self.send_response(status_code)
