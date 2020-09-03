@@ -61,8 +61,8 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
     }]
 
 def search(data, key, cs = False, marker = ""):
-    if "_%_" in marker:
-        marker_s, marker_e = marker.split("_%_")[0:2]
+    if "_$_" in marker:
+        marker_s, marker_e = marker.split("_$_")[0:2]
     else:
         marker_s = marker_e = marker
 

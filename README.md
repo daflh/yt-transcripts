@@ -10,6 +10,6 @@ Available parameters are:
 - `type` - by default, this will look for manually created transcript then auto-generated transcript, but you can get only `manual` or `generated` transcripts using this parameter
 - `key`- search and only returns text that contains the requested string, as opposed to returns all text in the transcript
 - `cs` - set this parameter to `true` to make search case sensitive
-- `marker` - string that used as a marker before and after `key` found in text, you can also use different markers for before and after `key` using `_%_`, for example `<mark>_%_</mark>`
+- `marker` - string that used as a marker before and after `key` found in text, you can also use different markers for before and after `key` using `_$_`, for example `<mark>_$_</mark>`
 - `size` - how much maximum text is returned, if not set, then return all text found
 - `page` - the requested page based on the value of `size` parameter, if parameter `size` isn't exist, this will be ignored, page starts at 1
