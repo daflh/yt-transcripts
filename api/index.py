@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
-import json, re
+import json, re, math
 
 # don't know how to get scheme & netloc dynamically
 host = "https://yt-transcripts.vercel.app"
@@ -141,6 +141,27 @@ def get(qs):
                 data, search_attributes = search(data, qs)
                 # this is just search options (keyword, etc.) and how many text found
                 responses["search"] = search_attributes
+
+            # by default, size is 0, which means show all
+            size = int(qs.get("size", 0))
+            assert size >= 0, "Invalid size, only positive integers are valid"
+
+            if size > 0:
+                # these only run when 'size' param is present, showing page 1 by default
+                page = int(qs.get("page", 1))
+                assert page > 0, "Invalid page number, only positive integers are valid"
+
+                # reduce the value of 'page' by 1 because list index starts with 0
+                start = size * (page - 1)
+                end = start + size
+                number_of_pages = math.ceil(len(data) / size)
+                data = data[start:end]
+
+                responses.update({
+                    "size": size,
+                    "page": page,
+                    "number_of_pages": number_of_pages
+                })
 
             responses["data"] = data
         
