@@ -191,9 +191,13 @@ class handler(BaseHTTPRequestHandler):
 
         responses = get(query_string)
         status_code = 200 if not responses["is_error"] else 400
+        # cache max age 2 hours
+        max_age = 60 * 60 * 2
 
         self.send_response(status_code)
-        self.send_header('Content-type', 'application/json; charset=utf-8')
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", f"public, max-age={max_age}")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         # convert python dict to json
         self.wfile.write(json.dumps(responses).encode())
