@@ -190,11 +190,11 @@ class handler(BaseHTTPRequestHandler):
         query_string = dict(parse_qsl(urlparse(self.path).query))
 
         responses = get(query_string)
-        status_code = 200 if not responses["is_error"] else 400
         # cache max age 2 hours
         max_age = 60 * 60 * 2
 
-        self.send_response(status_code)
+        # status code always 200 OK
+        self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", f"public, max-age={max_age}")
         self.send_header("Access-Control-Allow-Origin", "*")
