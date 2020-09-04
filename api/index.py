@@ -5,6 +5,12 @@ import json, re, math
 
 # don't know how to get scheme & netloc dynamically
 host = "https://yt-transcripts.vercel.app"
+error_msg = {
+    "MissingVideoParam": "Missing required parameter 'v' for Youtube video ID",
+    "VideoInvalid": "Invalid video ID, try 'jNQXAC9IVRw' as an example",
+    "SizeInvalid": "Invalid size, only positive integers are valid",
+    "PageInvalid": "Invalid page number"
+}
 
 def _list(video_id):
     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
@@ -92,13 +98,15 @@ def search(data, key, cs = False, marker = ""):
     }]
 
 def get(qs):
-    message = ""
+    error = {
+        "is_error": False
+    }
     responses = {}
     
     try:
-        assert "v" in qs, "Missing required parameter 'v'"
+        assert "v" in qs, "MissingVideoParam"
         # youtube video ID is always 11 characters in length
-        assert len(qs["v"]) == 11, "Invalid video ID, try 'jNQXAC9IVRw' as an example"
+        assert len(qs["v"]) == 11, "VideoInvalid"
 
         video_id = qs["v"]
 
@@ -140,7 +148,7 @@ def get(qs):
 
             # by default, size is 0, which means show all
             size = qs.get("size", "0")
-            assert size.isdigit(), "Invalid page number, only positive integers are valid"
+            assert size.isdigit(), "SizeInvalid"
             size = int(size)
 
             if len(data) > 0 and size > 0:
@@ -150,7 +158,7 @@ def get(qs):
                 page = int(page) if page.isdigit() else -1
                 t_pages = math.ceil(len(data) / size)
 
-                assert 1 <= page <= t_pages, f"Invalid page, there are only page 1 until {t_pages}"
+                assert 1 <= page, "PageInvalid"
 
                 # reduce the value of 'page' by 1 because list index starts with 0
                 start = size * (page - 1)
@@ -166,20 +174,26 @@ def get(qs):
             responses["data"] = data
         
     except Exception as e:
-        _msg = str(e)
-        # get CAUSE_MESSAGE of YouTubeTranscriptApi errors
-        if "CAUSE_MESSAGE" in dir(e):
-            cause = str(getattr(e, "CAUSE_MESSAGE"))
-            # only for NoTranscriptFound error
-            _msg = cause.split(":")[0] if ":" in cause else cause
+        error["is_error"] = True
 
-        message = _msg
+        # error comes from YouTubeTranscriptApi
+        if "CAUSE_MESSAGE" in dir(e):
+            # get CAUSE_MESSAGE of that error
+            msg = str(getattr(e, "CAUSE_MESSAGE"))
+            # this only for NoTranscriptFound error
+            if ":" in msg:
+                msg = msg.split(":")[0]
+            error["error"] = type(e).__name__
+            error["error_message"] = msg
+
+        else:
+            error["error"] = str(e)
+            error["error_message"] = error_msg[str(e)]
+
         responses["data"] = []
 
     return {
-        "is_error": False if message == "" else True,
-        # if there's no error, "message" contains only empty string
-        "message": message,
+        **error,
         **responses
     }
 
