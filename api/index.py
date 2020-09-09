@@ -45,10 +45,7 @@ def _find(video_id, lang_code = [], translate_to = None, transcript_type = ""):
     # if "lang_code" list is empty, search for english transcript, then search
     # from the list of available languages of the video
     if len(lang_code) == 0:
-        available_lang = list(map(
-            lambda n: n.language_code,
-            list(transcript_list)
-        ))
+        available_lang = [transcript.language_code for transcript in transcript_list]
         lang_code = ["en", *available_lang]
 
     transcript = getattr(transcript_list, methodToFind)(lang_code)
