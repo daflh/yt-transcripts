@@ -105,8 +105,8 @@ def get(qs):
     
     try:
         assert "v" in qs, "MissingVideoParam"
-        # youtube video ID is always 11 characters in length
-        assert len(qs["v"]) == 11, "VideoInvalid"
+        # check if youtube video id is valid
+        assert re.compile("^[A-Za-z0-9_-]{11}$").match(qs["v"]), "VideoInvalid"
 
         video_id = qs["v"]
 
