@@ -1,10 +1,11 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
-import json, re, math
+import json, re, math, os
 
-# don't know how to get scheme & netloc dynamically
-host = "https://yt-transcripts.vercel.app"
+host = os.environ["VERCEL_URL"]
+if not re.match("https?://", host):
+    host = f"http://{host}"
 error_msg = {
     "MissingVideoParam": "Missing required parameter 'v' for Youtube video ID",
     "VideoInvalid": "Invalid video ID, try 'jNQXAC9IVRw' as an example",
