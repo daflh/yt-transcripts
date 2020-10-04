@@ -31,6 +31,5 @@ npm install -g vercel
 
 vercel login # Login to your vercel account
 vercel # Link this directory to your Vercel project
-vercel env add VERCEL_URL # Add `VERCEL_URL` environment variable
 vercel dev # Start the development server
 ```

@@ -3,9 +3,6 @@ from urllib.parse import urlparse, parse_qsl
 from youtube_transcript_api import YouTubeTranscriptApi
 import json, re, math, os
 
-host = os.environ["VERCEL_URL"]
-if not re.match("https?://", host):
-    host = f"http://{host}"
 error_msg = {
     "MissingVideoParam": "Missing required parameter 'v' for Youtube video ID",
     "VideoInvalid": "Invalid video ID, try 'jNQXAC9IVRw' as an example",
@@ -26,7 +23,7 @@ def _list(video_id):
             "lang": transcript.language,
             "lang_code": lang_code,
             "transcript_type": transcript_type,
-            "url": f"{host}/api?v={video_id}&lang={lang_code}&type={transcript_type}"
+            "url": f"/api?v={video_id}&lang={lang_code}&type={transcript_type}"
         })
 
     return neat_transcript_list
@@ -119,7 +116,7 @@ def get(qs):
             args = {}
             args["video_id"] = video_id
 
-            responses["transcript_list_url"] = f"{host}/api?v={video_id}&list=true"
+            responses["transcript_list_url"] = f"/api?v={video_id}&list=true"
 
             if "lang" in qs:
                 args["lang_code"] = qs["lang"].split(",")
