@@ -2,7 +2,7 @@
 
 Get transcripts/captions for a given YouTube video using REST API. [See it live](https://yt-transcripts.vercel.app/api).
 
-For API implementation example, see [here](https://github.com/dafiulh/cari-teks).
+For API implementation example, see [here](https://github.com/daflh/cari-teks).
 
 Available parameters are:
 - `v` - a Youtube video ID that will be used to find transcripts (example: `jNQXAC9IVRw`), this is __required__
