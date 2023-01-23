@@ -1,6 +1,8 @@
 # yt-transcripts
 
-Go to [here](https://yt-transcripts.vercel.app/api) to see it live
+Get transcripts/captions for a given YouTube video using REST API. [See it live](https://yt-transcripts.vercel.app/api).
+
+For API implementation example, see [here](https://github.com/dafiulh/cari-teks).
 
 Available parameters are:
 - `v` - a Youtube video ID that will be used to find transcripts (example: `jNQXAC9IVRw`), this is __required__
@@ -16,7 +18,7 @@ Available parameters are:
 
 ## Development
 
-Make sure you have Python, pip, Node and npm installed on your machine
+Make sure you have Python, pip, Node and npm installed on your machine.
 
 ```sh
 # Clone this repository and then move into that directory
