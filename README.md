@@ -20,7 +20,7 @@ Make sure you have Python, pip, Node and npm installed on your machine
 
 ```sh
 # Clone this repository and then move into that directory
-git clone https://github.com/dafiulh/yt-transcripts.git
+git clone https://github.com/daflh/yt-transcripts.git
 cd yt-transcripts
 
 # Install required dependency for Python
